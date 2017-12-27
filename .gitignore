@@ -1,0 +1,7 @@
+*.class
+*.log
+*.jar
+*.xml
+*.iml
+target/*
+project/project/*
