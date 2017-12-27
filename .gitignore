@@ -1,7 +1,9 @@
+.DS_Store
 *.class
 *.log
 *.jar
 *.xml
 *.iml
 target/*
+project/target/*
 project/project/*
