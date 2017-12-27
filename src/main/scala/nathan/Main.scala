@@ -20,14 +20,3 @@ object Main extends App {
   println("******" * 10)
   println(t.toList)
 }
-object modules{
-
-}
-object MyMacros{
-  import scala.language.experimental.macros
-  import scala.reflect.macros.blackbox.Context
-  def greeting(person:String):Unit=macro greetingMacro
-  def greetingMacro(c:Context)(person:c.Expr[String])={
-
-  }
-}
