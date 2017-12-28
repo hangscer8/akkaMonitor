@@ -12,16 +12,16 @@ trait WrapperActor extends Actor with ActorLogging {
   /**
     * 已经处理的消息数量(处理失败的消息数量)
     */
-  var dealMsgNumber: BigDecimal = 0.0
+  private[this] var dealMsgNumber: BigDecimal = 0.0
   /**
     * receive函数上次开始运行时刻与结束时刻
     */
-  var lastRunTime: Long = -1L
-  var lastFinishTime: Long = -1L
+  private[this] var lastRunTime: Long = -1L
+  private[this] var lastFinishTime: Long = -1L
   /**
     * 每个消息的平均处理时间
     */
-  var avgDealMsgDuration: BigDecimal = 0.0
+  private[this] var avgDealMsgDuration: BigDecimal = 0.0
 
   def wrapReceive: Receive
 
