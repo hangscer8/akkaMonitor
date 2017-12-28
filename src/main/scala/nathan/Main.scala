@@ -16,8 +16,6 @@ object Main extends App {
   val system = ActorSystem("akkaMonitor")
   val genActor = system.actorOf(Props(classOf[GenActor], 4))
   system.actorOf(Props[AkkaMonitorActor], "monitorCenter")
-  Thread.sleep(2000)
-  system.stop(genActor)
 
   def getChildrenList(actorRef: ActorRef): FetchChildrenListResult = {
     Await.result((actorRef ? FetchChildren).mapTo[FetchChildrenListResult], 10 seconds)
@@ -34,10 +32,19 @@ object Main extends App {
 class GenActor(n: Int) extends WrapperActor {
   override def wrapPreStart(): Unit = n match {
     case 0 =>
-    case _ => (1 to n).foreach(_ => context.actorOf(Props(classOf[GenActor], n - 1)))
+    case _ => (1 to n).foreach { _ =>
+      Thread.sleep(1000)
+      context.actorOf(Props(classOf[GenActor], n - 1))
+    }
   }
 
   override def wrapReceive: Receive = {
     case _ =>
   }
 }
+
+//ActorRef Actor[akka://akkaMonitor/user/$a#-2066925243]
+//path akka://akkaMonitor/user/$a
+//path.name $a
+//path.address akka://akkaMonitor
+//path.root akka://akkaMonitor/

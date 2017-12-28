@@ -1,9 +1,8 @@
 package nathan.tree
 
-trait Tree[+A] { //本树中的任何节点的值不能重复!!!(在delete时，会全部删除)
+trait Tree[+A] {
+  //本树中的任何节点的值不能重复!!!(在delete时，会全部删除)
   self =>
-  //todo 在find insert delete时前，会查询满足条件的节点，如果在树中没有该节点，那么整个树会被遍历一遍，很不高效
-  //todo 所以在每个branch节点上，冗余一个hashMap，把子节点以及子节点的子节点等等全部在hashMap中登记，这样在查找时，避免不必要的分支递归
   def isEmpty: Boolean = self == EmptyTree
 
   def nonEmpty = !isEmpty
@@ -61,7 +60,8 @@ trait Tree[+A] { //本树中的任何节点的值不能重复!!!(在delete时，
     Tree.insertChild(self, p, value)
   }
 
-  def deleteSubTree(p: A => Boolean): Tree[A] = self match { //把满足的条件的节点以及其子节点全部删除
+  def deleteSubTree(p: A => Boolean): Tree[A] = self match {
+    //把满足的条件的节点以及其子节点全部删除
     case EmptyTree => EmptyTree
     case Leaf(v) => p(v) match {
       case true => EmptyTree //满足条件 删除
@@ -93,7 +93,8 @@ trait Tree[+A] { //本树中的任何节点的值不能重复!!!(在delete时，
     }
   }
 
-  def insert[B >: A](value: B): Tree[B] = self match { //没有平衡操作，而且还是是不可变结构
+  def insert[B >: A](value: B): Tree[B] = self match {
+    //没有平衡操作，而且还是是不可变结构
     case EmptyTree => Leaf(value)
     case Leaf(v) => Branch(v, List(Leaf(value)))
     case Branch(v, bs) => Branch(v, Leaf(value) :: bs)
@@ -118,19 +119,25 @@ trait Tree[+A] { //本树中的任何节点的值不能重复!!!(在delete时，
   }
 }
 
-case object EmptyTree extends Tree[Nothing] //空节点
+case object EmptyTree extends Tree[Nothing]
 
-case class Leaf[+A](v: A) extends Tree[A] //叶节点
+//空节点
+
+case class Leaf[+A](v: A) extends Tree[A]
+
+//叶节点
 
 class Branch[+A](val v: A, val bs: List[Tree[A]]) extends Tree[A] {
   override def equals(obj: scala.Any): Boolean = {
     obj.isInstanceOf[Branch[_]] match {
       case false => //不是分支节点
-        obj.isInstanceOf[Leaf[_]] match { //是叶子节点吗
+        obj.isInstanceOf[Leaf[_]] match {
+          //是叶子节点吗
           case false => false
           case true =>
             val temp = obj.asInstanceOf[Leaf[_]]
-            this.bs.filter(_.nonEmpty) match { //本节点是其他分支为空吗
+            this.bs.filter(_.nonEmpty) match {
+              //本节点是其他分支为空吗
               case Nil => this.v == temp.v
               case _ => false
             }
@@ -154,11 +161,18 @@ object Branch {
 object Tree {
   def empty[A]: Tree[A] = EmptyTree
 
-  private[tree] def insertChild[B >: A, A](root: Tree[A], p: B => Boolean, value: B): Tree[B] = root match { //满足条件的节点插入子节点 不可变结构
-    case EmptyTree => EmptyTree //空节点
+  private[tree] def insertChild[B >: A, A](root: Tree[A], p: B => Boolean, value: B): Tree[B] = root match {
+    //满足条件的节点插入子节点 不可变结构
+    case EmptyTree => Leaf(value) //空节点
     case Leaf(v) if p(v) => Branch(v, List(Leaf(value))) // 此时tree是一个叶子节点 在tree节点插入子节点
     case Leaf(_) => root //fix bug ok!!
-    case Branch(v, bs) if p(v) => Branch(v, Leaf(value) :: bs) //找到了 加入子节点
+    case Branch(v, bs) if p(v) =>
+      bs.map(_.valueOption).flatten.contains(value) match {
+        case true =>
+          root //存在满足的父节点，但是直接子节点已经存在，不插入
+        case false =>
+          Branch(v, Leaf(value) :: bs) //找到了 加入子节点
+      }
     case Branch(v, bs) => Branch(v, bs.map(t => insertChild(t, p, value))) //没找到，递归进入下一层
   }
 }
