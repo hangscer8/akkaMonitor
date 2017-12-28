@@ -1,33 +1,35 @@
 package akka.actor.baseActor
 
-import akka.actor.Actor
+import akka.actor.{Actor, ActorLogging, ActorRef}
 
 /**
   * Created by jianghang on 17/12/27.
   */
-trait WrapperActor extends Actor {
+trait WrapperActor extends Actor with ActorLogging {
 
   import WrapperActor.ReceiveFetchState
 
   /**
     * 已经处理的消息数量(处理失败的消息数量)
     */
-  private[this] var dealMsgNumber: BigDecimal = 0.0
+  var dealMsgNumber: BigDecimal = 0.0
   /**
     * receive函数上次开始运行时刻与结束时刻
     */
-  private[this] var lastRunTime: Long = -1L
-  private[this] var lastFinishTime: Long = -1L
+  var lastRunTime: Long = -1L
+  var lastFinishTime: Long = -1L
   /**
     * 每个消息的平均处理时间
     */
-  private[this] var avgDealMsgDuration: BigDecimal = 0.0
+  var avgDealMsgDuration: BigDecimal = 0.0
 
   def wrapReceive: Receive
 
   def fetchResult: ReceiveFetchState = {
     case FetchChildren =>
-      sender() ! context.children.toList
+      context.system.eventStream.publish(FetchChildrenListResult(self, context.children.toList))
+    case FetchActorRef =>
+      context.system.eventStream.publish(FetchActorRefResult(self))
   }
 
   @throws(classOf[Exception])
@@ -44,7 +46,6 @@ trait WrapperActor extends Actor {
     }
     wrapPostStop()
   }
-
 
   def wrapPostRestart(reason: Throwable): Unit = wrapPreStart()
 
@@ -67,13 +68,19 @@ trait WrapperActor extends Actor {
     * 请使用wrapPreStart
     */
   @Deprecated
-  override def preStart(): Unit = wrapPreStart()
+  override def preStart(): Unit = {
+    context.system.eventStream.publish(FetchActorStarted(self))
+    wrapPreStart()
+  }
 
   /**
     * 请使用wrapPostStop
     */
   @Deprecated
-  override def postStop(): Unit = wrapPostStop()
+  override def postStop(): Unit = {
+    context.system.eventStream.publish(FetchActorTerminated(self))
+    wrapPostStop()
+  }
 
   /**
     * 请使用wrapPreRestart
@@ -97,3 +104,17 @@ trait FetchSate
 case object FetchAkkaMonitorState extends FetchSate
 
 case object FetchChildren extends FetchSate
+
+case object FetchActorRef extends FetchSate
+
+trait FetchResult
+
+case class FetchAkkaMonitorStateResult(actor: ActorRef) extends FetchResult
+
+case class FetchActorTerminated(actor: ActorRef) extends FetchResult
+
+case class FetchActorStarted(actor: ActorRef) extends FetchResult
+
+case class FetchChildrenListResult(actor: ActorRef, childrenList: List[ActorRef]) extends FetchResult
+
+case class FetchActorRefResult(actor: ActorRef) extends FetchResult

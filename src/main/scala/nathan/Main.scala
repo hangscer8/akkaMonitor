@@ -1,22 +1,43 @@
 package nathan
 
-import nathan.tree._
+import akka.actor.baseActor._
+import akka.actor.monitor.AkkaMonitorActor
+import akka.actor.{ActorRef, ActorSystem, Props}
 
-import scala.collection.mutable.ListBuffer
+import scala.concurrent.Await
+import akka.pattern._
+import akka.util.Timeout
+import nathan.tree.{Branch, Leaf, Tree}
+
+import scala.concurrent.duration._
 
 object Main extends App {
-  val t = Branch(
-    1,
-    List(
-      Branch(2,
-        List(
-          Leaf(7),
-          Leaf(8))),
-      Leaf(3),
-      Branch(4, List(
-        Leaf(5),
-        Leaf(6)))))
-  t.foreach(println)
-  println("******" * 10)
-  println(t.toList)
+  implicit val timeout = Timeout(13 seconds)
+  val system = ActorSystem("akkaMonitor")
+  val genActor = system.actorOf(Props(classOf[GenActor], 4))
+  system.actorOf(Props[AkkaMonitorActor], "monitorCenter")
+  Thread.sleep(2000)
+  system.stop(genActor)
+
+  def getChildrenList(actorRef: ActorRef): FetchChildrenListResult = {
+    Await.result((actorRef ? FetchChildren).mapTo[FetchChildrenListResult], 10 seconds)
+  }
+
+  def genTree(actorRef: ActorRef): Tree[ActorRef] = getChildrenList(actorRef).childrenList match {
+    case Nil =>
+      Leaf(actorRef)
+    case children =>
+      Branch(actorRef, children.map(ch => genTree(ch)))
+  }
+}
+
+class GenActor(n: Int) extends WrapperActor {
+  override def wrapPreStart(): Unit = n match {
+    case 0 =>
+    case _ => (1 to n).foreach(_ => context.actorOf(Props(classOf[GenActor], n - 1)))
+  }
+
+  override def wrapReceive: Receive = {
+    case _ =>
+  }
 }
