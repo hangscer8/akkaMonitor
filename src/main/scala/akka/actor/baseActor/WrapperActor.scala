@@ -1,6 +1,6 @@
 package akka.actor.baseActor
 
-import akka.actor.{Actor, ActorLogging, ActorRef}
+import akka.actor.{Actor, ActorLogging, ActorPath, ActorRef}
 
 /**
   * Created by jianghang on 17/12/27.
@@ -22,10 +22,17 @@ trait WrapperActor extends Actor with ActorLogging {
     * 每个消息的平均处理时间
     */
   private[this] var avgDealMsgDuration: BigDecimal = 0.0
+  /**
+    * actor新建构造的时刻
+    */
+  private[this] var constructTime: Long = -1L
 
   def wrapReceive: Receive
 
   def fetchResult: ReceiveFetchState = {
+    case FetchAkkaMonitorState =>
+      val stateRes = FetchAkkaMonitorStateResult(self, self.path, this.getClass.getName, dealMsgNumber, lastRunTime, lastFinishTime, avgDealMsgDuration, constructTime)
+      context.system.eventStream.publish(stateRes)
     case FetchChildren =>
       context.system.eventStream.publish(FetchChildrenListResult(self, context.children.toList))
     case FetchActorRef =>
@@ -69,6 +76,7 @@ trait WrapperActor extends Actor with ActorLogging {
     */
   @Deprecated
   override def preStart(): Unit = {
+    constructTime = System.currentTimeMillis()
     context.system.eventStream.publish(FetchActorStarted(self))
     wrapPreStart()
   }
@@ -109,7 +117,7 @@ case object FetchActorRef extends FetchSate
 
 trait FetchResult
 
-case class FetchAkkaMonitorStateResult(actor: ActorRef) extends FetchResult
+case class FetchAkkaMonitorStateResult(actor: ActorRef, path: ActorPath, className: String, dealMsgNumber: BigDecimal, lastRunTime: Long, lastFinishTime: Long, avgDealMsgDuration: BigDecimal, constructTime: Long) extends FetchResult
 
 case class FetchActorTerminated(actor: ActorRef) extends FetchResult
 
