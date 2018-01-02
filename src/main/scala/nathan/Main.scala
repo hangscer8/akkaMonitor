@@ -13,13 +13,13 @@ object Main extends App {
   implicit val timeout = Timeout(13 seconds)
   implicit val ec = scala.concurrent.ExecutionContext.global
   val system = ActorSystem("akkaMonitor")
-  val genActor = system.actorOf(Props(classOf[GenActor], 4))
+  val genActor = system.actorOf(Props(classOf[GenActor], 2))
   val monitorActor = system.actorOf(Props[AkkaMonitorActor], "monitorCenter")
   (1 to 10).foreach { index =>
     Thread.sleep(1000)
     println(index)
   }
-  (monitorActor ? "JSONTREE").mapTo[String] onComplete {
+  (monitorActor ? "JSONLIST").mapTo[String] onComplete {
     case Success(r) => println(r)
     case Failure(ex) =>
       ex.printStackTrace()

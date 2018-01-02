@@ -77,6 +77,7 @@ trait WrapperActor extends Actor with ActorLogging {
   @Deprecated
   override def preStart(): Unit = {
     constructTime = System.currentTimeMillis()
+    //监督actor的新生
     context.system.eventStream.publish(FetchActorStarted(self))
     wrapPreStart()
   }
@@ -86,6 +87,7 @@ trait WrapperActor extends Actor with ActorLogging {
     */
   @Deprecated
   override def postStop(): Unit = {
+    //某一个actor挂掉了，给akkaMonitor发送信号 监督actor的死亡
     context.system.eventStream.publish(FetchActorTerminated(self))
     wrapPostStop()
   }

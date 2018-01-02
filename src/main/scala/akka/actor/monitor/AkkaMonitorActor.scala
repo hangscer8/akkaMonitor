@@ -21,6 +21,36 @@ class AkkaMonitorActor extends WrapperActor {
     context.system.actorSelection("/user/*") ! FetchActorRef //第一步获取root节点下的 所有直接子节点
   }
 
+  def genJsonList() = {
+    val tempStr = tree.toList.map { path =>
+      actorState.get(path) match {
+        case Some(stateRes) =>
+          s"""
+             |{
+             |"name":"${stateRes.path}",
+             |"className":"${stateRes.className}",
+             |"path":"${stateRes.path}",
+             |"dealMsgNumber":${stateRes.dealMsgNumber.toLongExact},
+             |"lastRunTime":${stateRes.lastRunTime},
+             |"lastFinishTime":${stateRes.lastFinishTime},
+             |"avgDealMsgDuration":${stateRes.avgDealMsgDuration.doubleValue()},
+             |"constructTime":${stateRes.constructTime},
+             |"parent":"${stateRes.path.parent}"
+             |}
+           """.stripMargin
+        case None =>
+          s"""
+             |{
+             |"name":"${path}",
+             |"parent":${if (path == tree.value) "null" else "\"" + path.parent + "\""}
+             |}
+           """.stripMargin
+      }
+    }.mkString(",")
+    //tree.value是得到tree的root的值，如果一个actor的path与tree的根节点相等，那么该节点就没有父节点，它本身就是root
+    s"""[${tempStr}]"""
+  }
+
   def genJsonTree() = {
     def loop(tree: Tree[ActorPath]): String = {
       tree match {
@@ -96,7 +126,6 @@ class AkkaMonitorActor extends WrapperActor {
         }
       }
       childrenList.foreach(ch => ch ! FetchChildren)
-      tree.print()
     case FetchActorRefResult(actor) => //第一步获取root节点下的 所有直接子节点
       tree = tree match { //需要把"/user"虚拟节点也加入tree里面来
         case Leaf(root) =>
@@ -117,6 +146,8 @@ class AkkaMonitorActor extends WrapperActor {
       }
     case "JSONTREE" =>
       sender() ! genJsonTree
+    case "JSONLIST" =>
+      sender() ! genJsonList()
   }
 }
 
